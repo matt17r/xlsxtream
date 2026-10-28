@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New `:freeze_rows` and `:freeze_columns` worksheet and workbook options, to freeze panes
+
 ## 3.2.0 (2025-01-08)
 
 - New `:has_header_row` worksheet and workbook option, causing first row of spreadsheet to use bold, centred text
