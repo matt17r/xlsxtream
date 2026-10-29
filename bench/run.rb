@@ -3,7 +3,7 @@
 # load path and prints the result as JSON. Normally called by
 # bench/compare.rb, but can be run directly:
 #
-#   bundle exec ruby -Ilib bench/run.rb mixed xml stream 20000 1 5
+#   bundle exec ruby -Ilib bench/run.rb mixed xml stream 20000 1 5 [2000]
 #
 # Arguments:
 #
@@ -16,6 +16,9 @@
 #   sheets      number of worksheets (the memory source writes the same rows
 #               to each)
 #   iterations  timed runs
+#   probe rows  optional; also counts allocations when writing this many rows
+#               per worksheet, so a caller can tell a fixed cost from one that
+#               grows with the number of rows
 #
 # For the stream source, building the rows without writing them is timed
 # separately, so that the gem's share of the time can be reported.
@@ -36,10 +39,11 @@ end
 
 WARMUP_ROWS = 2_000
 
-name, layer, source, row_count, sheet_count, iterations = ARGV
+name, layer, source, row_count, sheet_count, iterations, probe_rows = ARGV
 row_count = Integer(row_count || 20_000)
 sheet_count = Integer(sheet_count || 1)
 iterations = Integer(iterations || 5)
+probe_rows = Integer(probe_rows) if probe_rows
 
 scenario = Bench::SCENARIOS.fetch(name)
 build_row = scenario[:row]
@@ -101,6 +105,12 @@ warmup_rows = [row_count, WARMUP_ROWS].min
 each_row.call(warmup_rows) { |_row| }
 write.call(warmup_rows)
 
+# Measured after the warmup, which includes one-off costs like loading code
+if probe_rows
+  _, probe_allocations = measure(write, probe_rows)
+  probe_allocations -= measure(generate, probe_rows).last if source == 'stream'
+end
+
 times = []
 generate_times = []
 allocations = generate_allocations = nil
@@ -126,5 +136,6 @@ loaded_from = $LOADED_FEATURES.grep(%r{/xlsxtream/worksheet\.rb\z}).first
 puts JSON.generate(
   :times => times, :generate_times => generate_times,
   :allocations => allocations, :generate_allocations => generate_allocations,
-  :rows => row_count * sheet_count, :rss => rss, :loaded_from => loaded_from
+  :rows => row_count * sheet_count, :rss => rss, :loaded_from => loaded_from,
+  :probe_allocations => probe_allocations, :probe_rows => probe_rows && probe_rows * sheet_count
 )
