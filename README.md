@@ -111,6 +111,15 @@ Xlsxtream::Workbook.new(io, columns: [
 # The :columns option can also be given to write_worksheet, so it's
 # possible to have multiple worksheets with different column widths.
 
+# Number formats for numbers, dates and times, per column, using Excel
+# format codes. Strings, booleans and the header row are not affected.
+Xlsxtream::Workbook.new(io, columns: [
+  {},
+  { number_format: '"$"#,##0.00' },
+  { number_format: '0.0%' },
+  { number_format: 'dd/mm/yyyy' }
+])
+
 
 # Output from Rails (will stream without buffering)
 class ReportsController < ApplicationController
